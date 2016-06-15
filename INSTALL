@@ -1,0 +1,29 @@
+To install it, make sure you have these programs installed:
+
+    * Python >= 2.7
+    * python-setuptools
+    * python-stdeb (to create a DEB package)
+
+
+Package deb
+===========
+create a package .deb through this command:
+
+    $ python setup.py --command-packages=stdeb.command bdist_deb
+
+And finally, install package:
+
+    $ sudo dpkg -i deb_dist/*.deb
+
+
+Windows
+=======
+
+Open the Command Prompt
+Goto your Start Menu. Start > All Programs > Accessories > Command Prompt
+
+Type into the Command Prompt window:
+set path=%path%;C:\Python27\
+And hit enter.
+
+python setup.py install
