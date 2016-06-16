@@ -28,7 +28,7 @@ python c:\python27\Scripts\dxf2gml-catastro --server=192.168.1.5:80 --code=25831
 Ejemplo de uso en Linux
 =======================
 ```
-dxf2gml-catastro --server=192.168.1.5:80 --code=25831 c:\parcelas
+dxf2gml-catastro --server=192.168.1.5:80 --code=25831 /home/user/parcelas
 ```
 
 
