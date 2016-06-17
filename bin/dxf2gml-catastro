@@ -10,7 +10,7 @@ import httplib
 
 from optparse import OptionParser
 
-EPSG_DEFAULT = "25830" 
+EPSG_DEFAULT = "25830"
 EPSG_DICT = ['25828', '25829', '25830', '25831']
 
 
@@ -28,8 +28,8 @@ def post_multipart(host, selector, fields, files):
     h.putheader('content-length', str(len(body)))
     h.endheaders()
     h.send(body)
-    errcode, errmsg, headers = h.getreply()
-    return h.file.read()
+    status, errmsg, headers = h.getreply()
+    return status, h.file.read()
 
 def encode_multipart_formdata(fields, files):
     """
@@ -67,17 +67,24 @@ def convert(dxf_file, epsg, server):
     content = f.read()
     f.close()
 
+    status, response = post_multipart(
+        server,
+        "/catastro/json/",
+        [("code", epsg)],
+        [("dxf", dxf_file, content)]
+    )
+
+    if status != httplib.OK:
+        print(u'Error processing file: %s' % dxf_file)
+        print(response)
+        return
+
     try:
-        data = json.loads(post_multipart(
-            server, 
-            "/catastro/json/", 
-            [("code", epsg)], 
-            [("dxf", dxf_file, content)]
-        ))
+        data = json.loads(response)
     except Exception as e:
         print(str(e))
         exit(1)
-  
+
     gml_file, _ = os.path.splitext(dxf_file)
     gml_file += '.gml'
     with open(gml_file, 'w') as f:
@@ -101,19 +108,19 @@ if __name__ == '__main__':
                           help='EPSG code',)
 
     parser.add_option("-s", "--server",
-                          action="store", 
+                          action="store",
                           dest="server",
                           default="localhost",
                           help="dx2gml-catastro server",)
 
     options, args = parser.parse_args()
-    
+
     print "EPSG code: ", options.code
     print "Server: ", options.server
     if len(args) == 0:
         print "No files or directories especified"
         exit(1)
-    
+
     for _path in args:
         if os.path.isfile(_path):
             convert(_path, options.code, options.server)
