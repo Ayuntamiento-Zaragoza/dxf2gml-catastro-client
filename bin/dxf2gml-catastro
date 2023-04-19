@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -6,11 +6,11 @@ import sys
 import json
 import glob
 import mimetypes
-import httplib
+import http.client
 
 from optparse import OptionParser
 
-EPSG_DEFAULT = "25830"
+EPSG_DEFAULT = '25830'
 EPSG_DICT = ['25828', '25829', '25830', '25831']
 
 
@@ -22,39 +22,46 @@ def post_multipart(host, selector, fields, files):
     Return the server's response page.
     """
     content_type, body = encode_multipart_formdata(fields, files)
-    h = httplib.HTTP(host)
+    h = http.client.HTTPConnection(host)
     h.putrequest('POST', selector)
     h.putheader('content-type', content_type)
     h.putheader('content-length', str(len(body)))
     h.endheaders()
     h.send(body)
-    status, errmsg, headers = h.getreply()
-    return status, h.file.read()
+    response = h.getresponse()
+
+    return response.status, response.read()
+
 
 def encode_multipart_formdata(fields, files):
     """
     fields is a sequence of (name, value) elements for regular form fields.
     files is a sequence of (name, filename, value) elements for data to be uploaded as files
-    Return (content_type, body) ready for httplib.HTTP instance
+    Return (content_type, body) ready for http.client.HTTP instance
     """
     BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
-    CRLF = '\r\n'
+    CRLF = b'\r\n'
+
     L = []
     for (key, value) in fields:
-        L.append('--' + BOUNDARY)
-        L.append('Content-Disposition: form-data; name="%s"' % key)
+        L.append(f'--{BOUNDARY}')
+        L.append(f'Content-Disposition: form-data; name="{key}"')
         L.append('')
         L.append(value)
+
     for (key, filename, value) in files:
-        L.append('--' + BOUNDARY)
-        L.append('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, filename))
-        L.append('Content-Type: %s' % get_content_type(filename))
+        L.append(f'--{BOUNDARY}')
+        L.append(f'Content-Disposition: form-data; name="{key}"; filename="{filename}"')
+        L.append(f'Content-Type: {get_content_type(filename)}')
         L.append('')
         L.append(value)
-    L.append('--' + BOUNDARY + '--')
+
+    L.append(f'--{BOUNDARY}--')
     L.append('')
+    L = map(lambda l: l if isinstance(l, bytes) else l.encode('utf-8'), L)
     body = CRLF.join(L)
-    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+    content_type = f'multipart/form-data; boundary={BOUNDARY}'
+
     return content_type, body
 
 
@@ -63,9 +70,8 @@ def get_content_type(filename):
 
 
 def convert(dxf_file, epsg, server):
-    f = open(dxf_file, "rb")
-    content = f.read()
-    f.close()
+    with open(dxf_file, 'rb') as f:
+        content = f.read()
 
     status, response = post_multipart(
         server,
@@ -74,8 +80,8 @@ def convert(dxf_file, epsg, server):
         [("dxf", dxf_file, content)]
     )
 
-    if status != httplib.OK:
-        print(u'Error processing file: %s' % dxf_file)
+    if status != http.client.OK:
+        print(f'Error processing file: {dxf_file}')
         print(response)
         return
 
@@ -87,45 +93,49 @@ def convert(dxf_file, epsg, server):
 
     gml_file, _ = os.path.splitext(dxf_file)
     gml_file += '.gml'
-    with open(gml_file, 'w') as f:
-        f.writelines(data['gml'].encode('utf-8'))
+    with open(gml_file, 'wb') as f:
+        f.write(bytes(data['gml'], encoding='utf-8'))
 
-    print "-"*40
+    print("-" * 40)
     for i in data['info']:
         print(i)
 
-    print(u'Generated file: %s' % gml_file)
+    print(f'Generated file: {gml_file}')
 
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option('-c', '--code',
-                          type='choice',
-                          action='store',
-                          dest='code',
-                          choices=EPSG_DICT,
-                          default=EPSG_DEFAULT,
-                          help='EPSG code',)
+    parser.add_option(
+        '-c', '--code',
+        type='choice',
+        action='store',
+        dest='code',
+        choices=EPSG_DICT,
+        default=EPSG_DEFAULT,
+        help='EPSG code',
+    )
 
-    parser.add_option("-s", "--server",
-                          action="store",
-                          dest="server",
-                          default="localhost",
-                          help="dx2gml-catastro server",)
+    parser.add_option(
+        "-s", "--server",
+        action="store",
+        dest="server",
+        default="localhost",
+        help="dx2gml-catastro server",
+    )
 
     options, args = parser.parse_args()
 
-    print "EPSG code: ", options.code
-    print "Server: ", options.server
+    print("EPSG code:", options.code)
+    print("Server:", options.server)
     if len(args) == 0:
-        print "No files or directories especified"
+        print("No files or directories especified")
         exit(1)
 
     for _path in args:
         if os.path.isfile(_path):
             convert(_path, options.code, options.server)
         elif os.path.isdir(_path):
-            for _file in glob.glob(os.path.join( _path, "*.dxf")):
+            for _file in glob.glob(os.path.join(_path, "*.dxf")):
                 convert(_file, options.code, options.server)
         else:
-            print("ERROR. File or directory not found'%s'" % _path)
+            print(f"ERROR. File or directory not found '{path}'")
