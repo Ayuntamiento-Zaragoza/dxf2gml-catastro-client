@@ -7,7 +7,7 @@ Cliente para la conversión de ficheros en formato DXF a GML. Ver [servidor](htt
 Requisitos
 ==========
 
-* Python >= 2.7
+* Python >= 3.6
 
 
 Especificaciones de los ficheros DXF
@@ -21,7 +21,7 @@ Ejemplo de uso en Windows
 =========================
 
 ```
-python c:\python27\Scripts\dxf2gml-catastro --server=192.168.1.5:80 --code=25831 c:\parcelas
+python c:\python36\Scripts\dxf2gml-catastro --server=192.168.1.5:80 --code=25831 c:\parcelas
 ```
 
 
@@ -30,5 +30,3 @@ Ejemplo de uso en Linux
 ```
 dxf2gml-catastro --server=192.168.1.5:80 --code=25831 /home/user/parcelas
 ```
-
-
